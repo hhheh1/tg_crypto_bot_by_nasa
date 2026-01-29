@@ -1,5 +1,26 @@
+import sqlite3 as sq
+
+
 def init_database(db_path):
-    pass
+    with sq.connect(db_path) as conn:
+        cur = conn.cursor()
+
+        cur.execute(
+            """CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY,
+                    telegram_id INTEGER UNIQUE,
+                    username TEXT,
+                    created_at DATETIME
+                    )"""
+        )
+
+        cur.execute(
+            """CREATE TABLE IF NOT EXISTS supported_coins (
+                    id INTEGER PRIMARY KEY,
+                    ticker TEXT UNIQUE,
+                    name TEXT
+                    )"""
+        )
 
 
 def register_user(telegram_id, username):
