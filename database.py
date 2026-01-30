@@ -23,8 +23,14 @@ def init_database(db_path):
         )
 
 
-def register_user(telegram_id, username):
-    pass
+def register_user(db_path, telegram_id, username, created_at):
+    with sq.connect(db_path) as conn:
+        cur = conn.cursor()
+
+        cur.execute(
+            """INSERT OR IGNORE INTO users (telegram_id, username, created_at) VALUES (?, ?, ?)""",
+            (telegram_id, username, created_at),
+        )
 
 
 def get_user(telegram_id):
