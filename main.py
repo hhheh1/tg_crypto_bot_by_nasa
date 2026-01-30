@@ -44,12 +44,10 @@ def handle_price(message):
 
     ticker = parts[1].strip().upper()
     if db.is_coin_supported(ticker):
-        ticker_price = float(
-            requests.get(
+        ticker_price = requests.get(
                 f"{BINANCE_API_URL}/api/v3/ticker/price?symbol={ticker}USDT"
             ).json()["price"]
-        )
-        bot.send_message(message.chat.id, f"{ticker}\nЦена: {ticker_price:.2f}$")
+        bot.send_message(message.chat.id, f"{ticker}\nЦена: {ticker_price}$")
     else:
         bot.send_message(
             message.chat.id,
