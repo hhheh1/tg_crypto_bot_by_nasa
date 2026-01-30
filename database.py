@@ -28,12 +28,12 @@ def register_user(db_path, telegram_id, username, created_at):
         cur = conn.cursor()
 
         cur.execute(
-            """INSERT OR IGNORE INTO users (telegram_id, username, created_at) VALUES (?, ?, ?)""",
+            """INSERT INTO users (telegram_id, username, created_at) VALUES (?, ?, ?)""",
             (telegram_id, username, created_at),
         )
 
 
-def get_user(telegram_id):
+def get_user(db_path, telegram_id):
     pass
 
 
