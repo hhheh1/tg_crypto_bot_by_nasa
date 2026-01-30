@@ -45,8 +45,8 @@ def handle_price(message):
     ticker = parts[1].strip().upper()
     if db.is_coin_supported(ticker):
         ticker_price = requests.get(
-                f"{BINANCE_API_URL}/api/v3/ticker/price?symbol={ticker}USDT"
-            ).json()["price"]
+            f"{BINANCE_API_URL}/api/v3/ticker/price?symbol={ticker}USDT"
+        ).json()["price"]
         bot.send_message(message.chat.id, f"{ticker}\nЦена: {ticker_price}$")
     else:
         bot.send_message(
@@ -58,7 +58,36 @@ def handle_price(message):
 
 @bot.message_handler(commands=["stats"])
 def handle_stats(message):
-    pass
+    parts = message.text.split(maxsplit=1)
+
+    if len(parts) < 2:
+        bot.send_message(message.chat.id, "Укажи валюту, пример: /price BTC")
+        return
+
+    ticker = parts[1].strip().upper()
+    if db.is_coin_supported(ticker):
+        last_24h_stats = requests.get(
+            f"{BINANCE_API_URL}/api/v3/ticker/24hr?symbol={ticker}USDT"
+        ).json()
+        high_ = float(last_24h_stats["highPrice"])
+        low_ = float(last_24h_stats["lowPrice"])
+        change_pct = float(last_24h_stats["priceChangePercent"])
+
+        sign = "+" if change_pct >= 0 else ""
+
+        bot.send_message(
+            message.chat.id,
+            f"{ticker} — статистика за 24ч\n"
+            f"Максимум: {high_} $\n"
+            f"Минимум: {low_} $\n"
+            f"Изменение: {sign}{change_pct}%",
+        )
+    else:
+        bot.send_message(
+            message.chat.id,
+            "Недопустимая валюта, список допустимых валют:\n\n"
+            + " ".join(db.get_supported_coins(DATABASE_PATH)),
+        )
 
 
 @bot.message_handler(commands=["profile"])
