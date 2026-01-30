@@ -34,7 +34,15 @@ def register_user(db_path, telegram_id, username, created_at):
 
 
 def get_user(db_path, telegram_id):
-    pass
+    with sq.connect(db_path) as conn:
+        cur = conn.cursor()
+
+        cur.execute(
+            """SELECT id, telegram_id, username, created_at FROM users WHERE telegram_id = ?""",
+            (telegram_id,),
+        )
+
+    return cur.fetchone()
 
 
 def get_supported_coins():
