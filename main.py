@@ -92,7 +92,18 @@ def handle_stats(message):
 
 @bot.message_handler(commands=["profile"])
 def handle_profile(message):
-    pass
+    telegram_id = db.get_user(DATABASE_PATH, message.from_user.id)[1]
+    username = db.get_user(DATABASE_PATH, message.from_user.id)[2]
+    created_at = db.get_user(DATABASE_PATH, message.from_user.id)[3]
+
+    bot.send_message(
+        message.chat.id,
+        f"Твой профиль:\n"
+        f"ID: {telegram_id}\n"
+        f"Username: @{username}\n"
+        f"Зарегистрирован: {created_at}\n\n"
+        f"Поддерживаемые валюты: " + " ".join(db.get_supported_coins(DATABASE_PATH)),
+    )
 
 
 if __name__ == "__main__":
