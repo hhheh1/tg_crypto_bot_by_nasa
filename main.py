@@ -30,13 +30,32 @@ def handle_start(message):
 /stats {ticker} - Получает статистику за 24 часа из Binance API.\n
 /profile - Выводит профиль пользователя и список поддерживаемых валют.\n\n"""
         + "Поддерживаемые валюты:\n"
-        + " ".join(db.coins),
+        + " ".join(db.get_supported_coins(DATABASE_PATH)),
     )
 
 
 @bot.message_handler(commands=["price"])
 def handle_price(message):
-    pass
+    parts = message.text.split(maxsplit=1)
+
+    if len(parts) < 2:
+        bot.send_message(message.chat.id, "Укажи валюту, пример: /price BTC")
+        return
+
+    ticker = parts[1].strip().upper()
+    if db.is_coin_supported(ticker):
+        ticker_price = float(
+            requests.get(
+                f"{BINANCE_API_URL}/api/v3/ticker/price?symbol={ticker}USDT"
+            ).json()["price"]
+        )
+        bot.send_message(message.chat.id, f"{ticker}\nЦена: {ticker_price:.2f}$")
+    else:
+        bot.send_message(
+            message.chat.id,
+            "Недопустимая валюта, список допустимых валют:\n\n"
+            + " ".join(db.get_supported_coins(DATABASE_PATH)),
+        )
 
 
 @bot.message_handler(commands=["stats"])
