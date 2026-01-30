@@ -1,9 +1,5 @@
 import sqlite3 as sq
-import requests
-import re
-
-from config import BINANCE_API_URL
-
+from config import DATABASE_PATH
 
 coins = [
     "BTC",
@@ -114,9 +110,16 @@ def register_supported_coins(db_path):
         )
 
 
-def get_supported_coins():
-    pass
+def get_supported_coins(db_path):
+    with sq.connect(db_path) as conn:
+        cur = conn.cursor()
+
+        cur.execute("""SELECT ticker FROM supported_coins""")
+
+        rows = cur.fetchall()
+
+        return [row[0] for row in rows]
 
 
 def is_coin_supported(ticker):
-    pass
+    return ticker in get_supported_coins(DATABASE_PATH)
