@@ -1,61 +1,8 @@
 import sqlite3 as sq
-from config import DATABASE_PATH
+import requests
+import re
 
-coins = [
-    "BTC",
-    "ETH",
-    "BNB",
-    "SOL",
-    "XRP",
-    "ADA",
-    "DOGE",
-    "DOT",
-    "AVAX",
-    "LINK",
-    "MATIC",
-    "ATOM",
-    "LTC",
-    "BCH",
-    "ETC",
-    "XLM",
-    "TRX",
-    "FIL",
-    "NEAR",
-    "ICP",
-    "APT",
-    "ARB",
-    "OP",
-    "SUI",
-    "INJ",
-    "AAVE",
-    "UNI",
-    "MKR",
-    "SNX",
-    "CRV",
-    "SUSHI",
-    "RUNE",
-    "EGLD",
-    "ALGO",
-    "GRT",
-    "FLOW",
-    "QNT",
-    "DYDX",
-    "IMX",
-    "FET",
-    "RNDR",
-    "PEPE",
-    "FLOKI",
-    "BONK",
-    "WIF",
-    "TIA",
-    "JUP",
-    "PYTH",
-    "SEI",
-    "TAO",
-    "ZK",
-    "ZRO",
-    "TON",
-]
+from config import DATABASE_PATH, BINANCE_API_URL
 
 
 def init_database(db_path):
@@ -102,11 +49,92 @@ def get_user(db_path, telegram_id):
 
 
 def register_supported_coins(db_path):
+    # только A-Z/0-9
+    VALID_TICKER_RE = re.compile(r"^[A-Z0-9]{2,15}$")
+
+    # фиатные коды
+    FIAT_CODES = (
+        "USD",
+        "EUR",
+        "GBP",
+        "TRY",
+        "RUB",
+        "UAH",
+        "JPY",
+        "CNY",
+        "AUD",
+        "CAD",
+        "CHF",
+        "BRL",
+        "INR",
+        "ZAR",
+    )
+
+    # точные стейблы
+    STABLES_EXACT = {
+        "USDT",
+        "USDC",
+        "FDUSD",
+        "BUSD",
+        "TUSD",
+        "DAI",
+        "USDP",
+        "PAX",
+        "UST",
+        "USTC",
+        "EURC",
+        "EURT",
+    }
+
+    # мощный фильтр: убираем тикеры с любым фиат-кодом внутри (RLUSD, XUSD, USDE...)
+    FIAT_LIKE_RE = re.compile(r"(" + "|".join(FIAT_CODES) + r")")
+
+    # --- exchangeInfo -> все активные пары к USDT ---
+    exchange_info = requests.get(f"{BINANCE_API_URL}/api/v3/exchangeInfo").json()
+    usdt_symbols = {
+        s["symbol"]
+        for s in exchange_info["symbols"]
+        if s.get("quoteAsset") == "USDT" and s.get("status") == "TRADING"
+    }
+
+    # --- ticker 24hr -> сортировка по объёму ---
+    tickers = requests.get(f"{BINANCE_API_URL}/api/v3/ticker/24hr").json()
+    filtered = [t for t in tickers if t.get("symbol") in usdt_symbols]
+    filtered.sort(key=lambda x: float(x.get("quoteVolume", 0) or 0), reverse=True)
+
+    # --- собираем ВСЕ тикеры (без ограничения top-50) ---
+    coins = []
+    seen = set()
+
+    for t in filtered:
+        sym = t.get("symbol", "")
+        if not sym.endswith("USDT"):
+            continue
+
+        base = sym[:-4]
+
+        # 1) мусорные тикеры (币安人生 и т.п.)
+        if not VALID_TICKER_RE.fullmatch(base):
+            continue
+
+        # 2) точные стейблы
+        if base in STABLES_EXACT:
+            continue
+
+        # 3) любые тикеры с фиат-кодами внутри (RLUSD, USD1, EURX...)
+        if FIAT_LIKE_RE.search(base):
+            continue
+
+        if base not in seen:
+            seen.add(base)
+            coins.append(base)
+
+    # --- запись всех тикеров в sqlite ---
     with sq.connect(db_path) as conn:
         cur = conn.cursor()
         cur.executemany(
             "INSERT OR IGNORE INTO supported_coins (ticker) VALUES (?)",
-            [(t,) for t in coins],
+            [(c,) for c in coins],
         )
 
 
